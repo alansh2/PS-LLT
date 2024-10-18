@@ -2,7 +2,7 @@
 clear
 close all
 
-N = 200;    %Number of panels
+N = 50;    %Number of panels
 CL_des = 0.46;   %Design wing CL
 sref = 2160.53; %Reference area
 bref = 135.70;
@@ -27,14 +27,11 @@ sos = 968.076;
 V = Minf*sos;
 
 theta = zeros(N,1);
-spacing = zeros(N,1);
-semi_width = zeros(N,1);
-sp = zeros(N,1);
 s = zeros(N,1);
-y = zeros(N,1);
-z = zeros(N,1);
 xle = zeros(N,1);
 xte = zeros(N,1);
+xvle = zeros(N+1,1);
+xvte = zeros(N+1,1);
 c = zeros(N,1);
 x = zeros(N,1);
 a = zeros(N,N);
@@ -45,20 +42,28 @@ Re = zeros(N,1);
 %Calculate reference span
 bref = sref/cavg;
 
+spacing = sin(pi/2*(0:N).'/N);
+midsp = 0.5*(spacing(1:N) + spacing(2:N+1));
+yv = spacing*(yc(2)-yc(1));
+zv = spacing*(zc(2)-zc(1));
+y = 0.5*(yv(1:N) + yv(2:N+1));
+z = 0.5*(zv(1:N) + zv(2:N+1));
+sp = 0.5*sqrt(diff(yv).^2 + diff(zv).^2);
+xvle(1) = xc1(1);
+xvte(1) = xc1(4);
 for i=1:N
     theta(i) = atan2(zc(2)-zc(1),yc(2)-yc(1));
-    spacing(i) = sin(pi/2.*(i - 0.5)/N);
-    semi_width(i) = 0.5*(sin(pi/2.*i/N)-sin(pi/2.*(i - 1.)/N));
-    sp(i) = semi_width(i)*sqrt((yc(2)-yc(1))^2+(zc(2)-zc(1))^2);
     s(i) = 2.*sp(i)/bref;
-    y(i) = yc(1)+spacing(i)*(yc(2)-yc(1));
-    z(i) = zc(1)+spacing(i)*(zc(2)-zc(1));
     if y(i)<=25.306992  %Yehudi break <- Why defined here?
-        xle(i) = xc1(1)+spacing(i)*(xc1(2)-xc1(1));
-        xte(i) = xc1(4)+spacing(i)*(xc1(3)-xc1(4));
+        xle(i) = xc1(1)+midsp(i)*(xc1(2)-xc1(1));
+        xte(i) = xc1(4)+midsp(i)*(xc1(3)-xc1(4));
+        xvle(i+1) = xc1(1)+spacing(i+1)*(xc1(2)-xc1(1));
+        xvte(i+1) = xc1(4)+spacing(i+1)*(xc1(3)-xc1(4));
     else
-        xle(i) = xc2(1)+spacing(i)*(xc2(2)-xc2(1));
-        xte(i) = xc2(4)+spacing(i)*(xc2(3)-xc2(4));
+        xle(i) = xc2(1)+midsp(i)*(xc2(2)-xc2(1));
+        xte(i) = xc2(4)+midsp(i)*(xc2(3)-xc2(4));
+        xvle(i+1) = xc2(1)+spacing(i+1)*(xc2(2)-xc2(1));
+        xvte(i+1) = xc2(4)+spacing(i+1)*(xc2(3)-xc2(4));
     end
     c(i) = (xte(i)-xle(i));
     Re(i) = c(i)*V/nu;
@@ -143,26 +148,39 @@ ar = bref^2/sref;
 e = CL^2/(pi*ar*CDi);
 
 % Add graph step
-plot(y,cn.*c)
+plot(y,cn)
 xlabel('Half-span, ft')
 ylabel('cl')
 title('Spanwise Lift Distribution')
 
+figure
+plot(yv,xvle,'-o')
+hold on
+plot(yv,xvte,'-o')
+plot([y y].',[xle xte].','k-x')
+
 %------------------------------------------------------------ export config
-M = spdiags(zeros(N+1,2)+0.5,-1:0,N+1,N+1);
-M(1,1) = 1;
-
-out = zeros(N+1,7);
-yv = M \ [0;y];
-out(:,[1 2 4]) = interp1(y,[xle xte z],yv,'linear','extrap');
-out(:,3) = yv;
-
-alf_ind = gamma(1)/(2*bref);
-twist = (cn/(2*pi) + alf_ind)*180/pi;
-a0 = zeros(N,1) + 2*pi;
-alf_ZL = zeros(N,1);
-
-out(1:N,5:7) = [twist a0 alf_ZL];
+% M = spdiags(zeros(N+1,2)+0.5,-1:0,N+1,N+1);
+% M(1,1) = 1;
+% 
+% out = zeros(N+1,7);
+% yv = M \ [0;y];
+% out(:,[1 2 4]) = interp1(y,[xle xte z],yv,'linear','extrap');
+% out(:,3) = yv;
+% 
+% M = spdiags(zeros(2*N+1,2)+[-1 1],-1:0,2*N+1,2*N);
+% ys = [-flipud(yv);yv(2:N+1)]/yv(N+1);
+% ysc = [-flipud(y);y]/yv(N+1);
+% G = [gamma(N:-1:1);gamma(1:N)]*V;
+% w = 1/pi/bref*sum(M*G./(ysc.'-ys),1).';
+% 
+% alf_ind = w(N+1:2*N)/V;
+% %alf_ind = gamma(1)/(2*bref);
+% a0 = zeros(N,1) + 2*pi;
+% alf_ZL = zeros(N,1);
+% twist = (cn./a0 + alf_ind + alf_ZL*pi/180)*180/pi;
+% 
+% out(1:N,5:7) = [twist a0 alf_ZL];
 
 % Write to file
 %fid = fopen('lltwing.dat','w');
