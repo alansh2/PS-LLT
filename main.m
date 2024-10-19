@@ -2,7 +2,7 @@
 clear
 close all
 
-geom = importWing('rectwing.dat');
+geom = importWing('lltwing.dat');
 
 alpha= 0;
 

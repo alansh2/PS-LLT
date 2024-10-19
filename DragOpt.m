@@ -2,7 +2,7 @@
 clear
 close all
 
-N = 100;    %Number of panels
+N = 200;    %Number of panels
 CL_des = 0.46;   %Design wing CL
 sref = 2160.53; %Reference area
 bref = 135.70;
@@ -54,7 +54,7 @@ end
 spacing = sin(pi/2*(0:N).'/N);
 vert = zeros(N+1,4);
 vert(:,[1 3 4]) = [xc1(1) yc(1) zc(1)] + spacing.*[xc1(2)-xc1(1) yc(2)-yc(1) zc(2)-zc(1)];
-vert(:,2) = interp1(TE(2,:),TE(1,:),vert(:,3));
+vert(:,2) = interp1(TE(2,:),TE(1,:),vert(:,3),'linear','extrap');
 
 dy = diff(vert(:,3));
 dz = diff(vert(:,4));
