@@ -5,7 +5,7 @@ close all
 N = 200;    %Number of panels
 CL_des = 0.46;   %Design wing CL
 sref = 2160.53; %Reference area
-bref = 135.70;
+bref = 136.42864;%135.70;
 cavg = sref/bref;   %Mean geometric chord
 
 %Enter end points of wing surface

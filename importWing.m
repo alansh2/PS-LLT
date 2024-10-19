@@ -55,3 +55,4 @@ geom.un = [flipud(un);un];
 geom.un(1:N,2) = -geom.un(1:N,2);
 geom.a0 = [flipud(a0);a0];
 geom.alf_ZL = [flipud(alf_ZL);alf_ZL];
+geom.twist = [flipud(twist);twist];
