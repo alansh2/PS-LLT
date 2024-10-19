@@ -2,17 +2,13 @@
 clear
 close all
 
-N = 50;    %Number of panels
+N = 100;    %Number of panels
 CL_des = 0.46;   %Design wing CL
 sref = 2160.53; %Reference area
 bref = 135.70;
 cavg = sref/bref;   %Mean geometric chord
 
 %Enter end points of wing surface
-%xc1 = [0.7294 190.2256 90 90];
-%xc2 = [64.442 90.5 95.6 86.422];
-%yc = [0 59 59 0];
-%zc = [0 4 4 0];
 xc1 = [35.46429217 68.526752 64.36102 64.36102];
 xc2 = [35.46429217 68.526752 74.87219 58.16147070];
 yc = [0 68.21432 68.21432 0];
@@ -26,50 +22,56 @@ Minf = 0.78;
 sos = 968.076;
 V = Minf*sos;
 
-theta = zeros(N,1);
-s = zeros(N,1);
-xle = zeros(N,1);
-xte = zeros(N,1);
-xvle = zeros(N+1,1);
-xvte = zeros(N+1,1);
-c = zeros(N,1);
-x = zeros(N,1);
 a = zeros(N,N);
 abar = zeros(N+1,N+1);
 b = zeros(N,1);
-Re = zeros(N,1);
+
+
+%CL_des = 0.6;   %Design wing CL
+%sref = 86.1112888448; %Reference area
+%bref = 26.24672;
+%cavg = sref/bref;   %Mean geometric chord
+%xc1 = [0 0 cavg cavg];
+%xc2 = [0 0 cavg cavg];
+%yc = [0 bref/2 bref/2 0];
+%zc = [0 0 0 0];
+%V = 262.4672;
+
 
 %Calculate reference span
 bref = sref/cavg;
 
-spacing = sin(pi/2*(0:N).'/N);
-midsp = 0.5*(spacing(1:N) + spacing(2:N+1));
-yv = spacing*(yc(2)-yc(1));
-zv = spacing*(zc(2)-zc(1));
-y = 0.5*(yv(1:N) + yv(2:N+1));
-z = 0.5*(zv(1:N) + zv(2:N+1));
-sp = 0.5*sqrt(diff(yv).^2 + diff(zv).^2);
-xvle(1) = xc1(1);
-xvte(1) = xc1(4);
-for i=1:N
-    theta(i) = atan2(zc(2)-zc(1),yc(2)-yc(1));
-    s(i) = 2.*sp(i)/bref;
-    if y(i)<=25.306992  %Yehudi break <- Why defined here?
-        xle(i) = xc1(1)+midsp(i)*(xc1(2)-xc1(1));
-        xte(i) = xc1(4)+midsp(i)*(xc1(3)-xc1(4));
-        xvle(i+1) = xc1(1)+spacing(i+1)*(xc1(2)-xc1(1));
-        xvte(i+1) = xc1(4)+spacing(i+1)*(xc1(3)-xc1(4));
-    else
-        xle(i) = xc2(1)+midsp(i)*(xc2(2)-xc2(1));
-        xte(i) = xc2(4)+midsp(i)*(xc2(3)-xc2(4));
-        xvle(i+1) = xc2(1)+spacing(i+1)*(xc2(2)-xc2(1));
-        xvte(i+1) = xc2(4)+spacing(i+1)*(xc2(3)-xc2(4));
-    end
-    c(i) = (xte(i)-xle(i));
-    Re(i) = c(i)*V/nu;
-    x(i) = xle(i)+0.25*c(i);
+%-------------------------------------------------------------- parse input
+TE = [xc1(4) 0 xc2(3);yc(4) 0 yc(3)];
+DNOM = xc1(3) - xc2(3) + xc2(4) - xc1(4);
+if DNOM == 0;
+    TE(:,2) = [];
+else
+    TE(4) = ((xc1(3)-xc2(3))*yc(4)+(xc2(4)-xc1(4))*yc(3))/DNOM;
+    TE(3) = (xc2(4)*(xc1(3)-xc1(4))-xc1(4)*(xc2(3)-xc2(4)))/DNOM;
 end
 
+spacing = sin(pi/2*(0:N).'/N);
+vert = zeros(N+1,4);
+vert(:,[1 3 4]) = [xc1(1) yc(1) zc(1)] + spacing.*[xc1(2)-xc1(1) yc(2)-yc(1) zc(2)-zc(1)];
+vert(:,2) = interp1(TE(2,:),TE(1,:),vert(:,3));
+
+dy = diff(vert(:,3));
+dz = diff(vert(:,4));
+xle = 0.5*(vert(1:N,1) + vert(2:N+1,1));
+xte = 0.5*(vert(1:N,2) + vert(2:N+1,2));
+y = vert(1:N,3) + 0.5*dy;
+z = vert(1:N,4) + 0.5*dz;
+sp = 0.5*sqrt(dy.^2 + dz.^2);
+s = 2*sp/bref;
+
+c = xte - xle;
+Re = c*V/nu;
+x = xle + 0.25*c;
+
+theta = atan2(dz,dy);
+
+%-------------------------------------------------------- do inverse design
 for i=1:N
     for j=1:N
         yp = (y(i)-y(j))*cos(theta(j))+(z(i)-z(j))*sin(theta(j));
@@ -79,7 +81,7 @@ for i=1:N
 
         a1 = ((yp-sp(j))/r1-(yp+sp(j))/r2)*cos(theta(i)-theta(j))+(zp/r1-zp/r2)*sin(theta(i)-theta(j));
 
-        %Assuming symmetry{
+        %Assuming symmetry[
         yp = (y(i)+y(j))*cos(-theta(j))+(z(i)-z(j))*sin(-theta(j));
         zp = -(y(i)+y(j))*sin(-theta(j))+(z(i)-z(j))*cos(-theta(j));
         r1 = zp^2+(yp-sp(j))^2;
@@ -118,6 +120,7 @@ nb = 1;
 
 gamma=abar\b;
 
+%---------------------------------------------------------- evaluate result
 CL = 0;
 CM = 0;
 CDi = 0;
@@ -153,37 +156,21 @@ xlabel('Half-span, ft')
 ylabel('cl')
 title('Spanwise Lift Distribution')
 
-figure
-plot(yv,xvle,'-o')
-hold on
-plot(yv,xvte,'-o')
-plot([y y].',[xle xte].','k-x')
-
 %------------------------------------------------------------ export config
-% M = spdiags(zeros(N+1,2)+0.5,-1:0,N+1,N+1);
-% M(1,1) = 1;
-% 
-% out = zeros(N+1,7);
-% yv = M \ [0;y];
-% out(:,[1 2 4]) = interp1(y,[xle xte z],yv,'linear','extrap');
-% out(:,3) = yv;
-% 
-% M = spdiags(zeros(2*N+1,2)+[-1 1],-1:0,2*N+1,2*N);
-% ys = [-flipud(yv);yv(2:N+1)]/yv(N+1);
-% ysc = [-flipud(y);y]/yv(N+1);
-% G = [gamma(N:-1:1);gamma(1:N)]*V;
-% w = 1/pi/bref*sum(M*G./(ysc.'-ys),1).';
-% 
-% alf_ind = w(N+1:2*N)/V;
-% %alf_ind = gamma(1)/(2*bref);
-% a0 = zeros(N,1) + 2*pi;
-% alf_ZL = zeros(N,1);
-% twist = (cn./a0 + alf_ind + alf_ZL*pi/180)*180/pi;
-% 
-% out(1:N,5:7) = [twist a0 alf_ZL];
+M = spdiags(zeros(2*N+1,2)+[-1 1],-1:0,2*N+1,2*N);
+ys = sin(pi/2*(-N:N).'/N);
+ysc = 0.5*(ys(1:2*N) + ys(2:2*N+1));
+G = [gamma(N:-1:1);gamma(1:N)]*V;
+w = 1/pi/bref*sum(M*G./(ysc.'-ys),1).'; %downwash velocity
+
+alf_ind = w(N+1:2*N)/V;
+%alf_ind = zeros(N,1) + gamma(1)/(2*bref);
+a0 = zeros(N,1) + 2*pi;
+alf_ZL = zeros(N,1);
+twist = (cn./a0 + alf_ind + alf_ZL*pi/180)*180/pi;
 
 % Write to file
 %fid = fopen('lltwing.dat','w');
 %fprintf(fid,'%13s %13s %13s %13s %13s %13s %13s\r\n','xle','xte','y','z','twist(deg)','a0','alfZL(deg)');
-%fprintf(fid,'%13.8f %13.8f %13.8f %13.8f %13.8f %13.8f %13.8f\r\n',out.');
+%fprintf(fid,'%13.8f %13.8f %13.8f %13.8f %13.8f %13.8f %13.8f\r\n',[vert [twist a0 alf_ZL;0 0 0]].');
 %fid = fclose(fid);
