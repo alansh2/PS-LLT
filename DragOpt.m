@@ -157,14 +157,7 @@ ylabel('cl')
 title('Spanwise Lift Distribution')
 
 %------------------------------------------------------------ export config
-M = spdiags(zeros(2*N+1,2)+[-1 1],-1:0,2*N+1,2*N);
-ys = sin(pi/2*(-N:N).'/N);
-ysc = 0.5*(ys(1:2*N) + ys(2:2*N+1));
-G = [gamma(N:-1:1);gamma(1:N)]*V;
-w = 1/pi/bref*sum(M*G./(ysc.'-ys),1).'; %downwash velocity
-
-alf_ind = w(N+1:2*N)/V;
-%alf_ind = zeros(N,1) + gamma(1)/(2*bref);
+alf_ind = gamma(1)*cavg/4/bref;
 a0 = zeros(N,1) + 2*pi;
 alf_ZL = zeros(N,1);
 twist = (cn./a0 + alf_ind + alf_ZL*pi/180)*180/pi;
