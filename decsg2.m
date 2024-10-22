@@ -35,6 +35,8 @@ for i = 2:numreg
     l2 = [floor(idx/size(A,1))+1;0]; % column index with pad
 
     % modify connectivity
+    pop1 = [any(in1(e1),2);false(numel(idx),1)];
+    pop2 = [any(in2(e2),2);false(numel(idx),1)];
     m1 = 0;
     m2 = 0;
     for j = 1:numel(idx)
@@ -52,6 +54,11 @@ for i = 2:numreg
             e2(end+1,:) = [n2+j e2(l2(j)+m2,2)];
             e2(l2(j)+m2,2) = n2+j;
         end
+        % update list of segments to delete
+        pop1(n1+j) = pop1(l1(j)+m1);
+        pop1(l1(j)+m1) = false;
+        pop2(n2+j) = pop2(l2(j)+m2);
+        pop2(l2(j)+m2) = false;
         % multiplicity
         if l1(j) == l1(j+1)
             m1 = n1 + j - l1(j);
@@ -65,13 +72,27 @@ for i = 2:numreg
         end
     end
 
+    out = [out;p];
+    rgns{i} = [rgns{i};p];
+
     % delete interior simplices
-    e1(ismember(e1,find(in1))) = [];
-    e2(ismember(e2,find(in2))) = [];
+    e1(pop1,:) = [];
+    e2(pop2,:) = [];
     e1 = reshape(e1,[],2);
     e2 = reshape(e2,[],2);
 
-    disp(e1)
-    disp('')
-    disp(e2)
+
+
+
+    figure(1); clf;
+    plot(out(e1).',out(e1+size(out,1)).')
+    hold on
+    plot(rgns{i}(e2).',rgns{i}(e2+size(rgns{i},1)).')
+
+    %EXAMPLE
+    % t = 2*pi*(0:99).'/100;
+    % gd = [5;0;0;0;2;2;-2;0;2;2;-2;100;cos(t);sin(t)];
+    % ns = char('rect1','C1');
+    % ns = ns.';
+    % decsg2(gd,ns)
 end
