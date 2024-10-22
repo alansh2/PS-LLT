@@ -35,42 +35,21 @@ for i = 2:numreg
     l2 = [floor(idx/size(A,1))+1;0]; % column index with pad
 
     % modify connectivity
-    pop1 = [any(in1(e1),2);false(numel(idx),1)];
-    pop2 = [any(in2(e2),2);false(numel(idx),1)];
-    m1 = 0;
-    m2 = 0;
+    pop1 = [in1(e1(:,2));false(numel(idx),1)];
+    pop2 = [in2(e2(:,2));false(numel(idx),1)];
     for j = 1:numel(idx)
-        if in1(l1(j))
-            e1(end+1,:) = [e1(l1(j)+m1,1) n1+j];
-            e1(l1(j)+m1,1) = n1+j;
-        else
-            e1(end+1,:) = [n1+j e1(l1(j)+m1,2)];
-            e1(l1(j)+m1,2) = n1+j;
-        end
-        if in2(l2(j))
-            e2(end+1,:) = [e2(l2(j)+m2,1) n2+j];
-            e2(l2(j)+m2,1) = n2+j;
-        else
-            e2(end+1,:) = [n2+j e2(l2(j)+m2,2)];
-            e2(l2(j)+m2,2) = n2+j;
-        end
+        e1(end+1,:) = [n1+j e1(l1(j),2)];
+        e1(l1(j),2) = n1+j;
+        e2(end+1,:) = [n2+j e2(l2(j),2)];
+        e2(l2(j),2) = n2+j;
         % update list of segments to delete
-        pop1(n1+j) = pop1(l1(j)+m1);
-        pop1(l1(j)+m1) = false;
-        pop2(n2+j) = pop2(l2(j)+m2);
-        pop2(l2(j)+m2) = false;
-        % multiplicity
-        if l1(j) == l1(j+1)
-            m1 = n1 + j - l1(j);
-        else
-            m1 = 0;
-        end
-        if l2(j) == l2(j+1)
-            m2 = n2 + j - l2(j);
-        else
-            m2 = 0;
-        end
+        pop1(n1+j) = pop1(l1(j));
+        pop1(l1(j)) = false;
+        pop2(n2+j) = pop2(l2(j));
+        pop2(l2(j)) = false;
     end
+    pop1(in1) = true;
+    pop2(in2) = true;
 
     out = [out;p];
     rgns{i} = [rgns{i};p];
