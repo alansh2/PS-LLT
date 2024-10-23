@@ -1,15 +1,33 @@
-function pgon = decsg2(gd,ns)
+function pgon = decsg2(gd,sf,ns)
 %DECSG2  Decompose constructive solid 2-D geometry into minimal regions
 % Inputs:
 %   gd: geometry description vector
+%   sf: set formula
 %   ns: name-space matrix
 filename = mfilename('fullpath');
 filepath = fileparts( filename );
 
 addpath([filepath,'/poly-test']);
 
-% parse input
-numreg = size(ns,2);
+%-------------------------------------------------------------- parse input
+% validate name-space and count regions
+if ischar(ns)
+    numreg = size(ns,2);
+    ns = regexp(reshape(char(ns,''),[],1).','\w*','match');
+elseif iscellstr(ns)
+    numreg = numel(ns);
+else
+    error('decsg2:incorrectInputClass','Incorrect input class.');
+end
+
+% decompose set formula
+sf = regexprep(sf,' ',''); % remove spaces
+v  = regexp(sf,'[\+\-\*]','split');
+op = regexp(sf,'[\+\-\*]','match');
+[lchk,locns] = ismember(v,ns);
+assert(all(lchk),'decsg2:undefinedString','Undefined string in set formula.');
+
+% extract regions
 rgns = cell(1,numreg);
 n1 = 1;
 for i = 1:numreg
@@ -18,8 +36,12 @@ for i = 1:numreg
     n1 = n2 + 1;
 end
 
-pgon = rgns{1};
-for i = 2:numreg
+%--------------------------------------------- iteratively form the polygon
+pgon = rgns{locns(1)};
+counter = 0;
+for i = locns(2:end)
+    counter = counter + 1;
+
     n1 = size(pgon,1);
     n2 = size(rgns{i},1);
     e1 = [1:n1;2:n1 1].';
@@ -30,6 +52,8 @@ for i = 2:numreg
 
     in1 = inpoly2(pgon,rgns{i},e2);
     in2 = inpoly2(rgns{i},pgon,e1);
+    if op{counter}=='*', in1 = ~in1; end
+    if op{counter}~='+', in2 = ~in2; end
 
     idx = find(A) - 1; % linear indices
     l1 = [mod(idx,size(A,1))+1;0]; % row index with pad
@@ -76,12 +100,4 @@ for i = 2:numreg
     end
 
     pgon = pgon(ordering,:); % sorted
-
-    %EXAMPLE
-    % t = 2*pi*(0:99).'/100;
-    % gd = [5;0.1;0.1;0.1;2;2;-2;0;2;2;-2;100;cos(t);sin(t);3;0;-1;-2;0;2;0];
-    % ns = char('rect1','C1','T1');
-    % ns = ns.';
-    % pgon = decsg2(gd,ns);
-    % plot(pgon(:,1),pgon(:,2))
 end
