@@ -1,60 +1,22 @@
+function [gamma,alf_ind,cn,CDi,CDp,CDp2] = DragOpt(vert,CL_des,Re)
 %DRAGOPT
-clear
-close all
+% Inputs:
+%   vert: (N+1)-by-4 array containing [xle xte y z] coordinates at nodal half-span positions
+% CL_des: design lift coefficient
+%     Re: aircraft Reynolds number
 
-N = 200;    %Number of panels
-CL_des = 0.46;   %Design wing CL
-sref = 2160.53; %Reference area
-bref = 136.42864;%135.70;
-cavg = sref/bref;   %Mean geometric chord
-
-%Enter end points of wing surface
-xc1 = [35.46429217 68.526752 64.36102 64.36102];
-xc2 = [35.46429217 68.526752 74.87219 58.16147070];
-yc = [0 68.21432 68.21432 0];
-zc = [0 4 4 0]; %Why 4?
-xcg = 60;
-cp = 0.25;
-rho = 0.000675954;
-mu = 2.99135e-7;
-nu = mu/rho;
-Minf = 0.78;
-sos = 968.076;
-V = Minf*sos;
-
-a = zeros(N,N);
-abar = zeros(N+1,N+1);
-b = zeros(N,1);
-
-
-%CL_des = 0.6;   %Design wing CL
-%sref = 86.1112888448; %Reference area
-%bref = 26.24672;
-%cavg = sref/bref;   %Mean geometric chord
-%xc1 = [0 0 cavg cavg];
-%xc2 = [0 0 cavg cavg];
-%yc = [0 bref/2 bref/2 0];
-%zc = [0 0 0 0];
-%V = 262.4672;
-
-
-%Calculate reference span
-bref = sref/cavg;
-
-%-------------------------------------------------------------- parse input
-TE = [xc1(4) 0 xc2(3);yc(4) 0 yc(3)];
-DNOM = xc1(3) - xc2(3) + xc2(4) - xc1(4);
-if DNOM == 0;
-    TE(:,2) = [];
-else
-    TE(4) = ((xc1(3)-xc2(3))*yc(4)+(xc2(4)-xc1(4))*yc(3))/DNOM;
-    TE(3) = (xc2(4)*(xc1(3)-xc1(4))-xc1(4)*(xc2(3)-xc2(4)))/DNOM;
+%---------------------------------------------- basic checks
+if size(vert,2) ~= 4
+    error('DragOpt:invalidInput','Invalid vertex definition.')
+end
+if (~isscalar(CL_des) || ...
+    ~isscalar(Re))
+    error('DragOpt:invalidInput','CL_des and Re must be scalar.')
 end
 
-spacing = sin(pi/2*(0:N).'/N);
-vert = zeros(N+1,4);
-vert(:,[1 3 4]) = [xc1(1) yc(1) zc(1)] + spacing.*[xc1(2)-xc1(1) yc(2)-yc(1) zc(2)-zc(1)];
-vert(:,2) = interp1(TE(2,:),TE(1,:),vert(:,3),'linear','extrap');
+%-------------------------------------------- parse geometry
+N = size(vert,1) - 1; %Number of panels
+bref = 2*vert(N+1,3); %Reference span
 
 dy = diff(vert(:,3));
 dz = diff(vert(:,4));
@@ -64,14 +26,21 @@ y = vert(1:N,3) + 0.5*dy;
 z = vert(1:N,4) + 0.5*dz;
 sp = 0.5*sqrt(dy.^2 + dz.^2);
 s = 2*sp/bref;
-
 c = xte - xle;
-Re = c*V/nu;
 x = xle + 0.25*c;
-
 theta = atan2(dz,dy);
 
-%-------------------------------------------------------- do inverse design
+%--------------------------------------- calculate constants
+sref = c.' * dy; %Reference area
+cavg = sref/bref; %Mean geometric chord
+cmac = 2/sref*trapz((vert(:,2)-vert(:,1)).^2,vert(:,3));
+Re = Re*c/cmac;
+
+%----------------------------------------- do inverse design
+a = zeros(N,N);
+abar = zeros(N+1,N+1);
+b = zeros(N,1);
+
 for i=1:N
     for j=1:N
         yp = (y(i)-y(j))*cos(theta(j))+(z(i)-z(j))*sin(theta(j));
@@ -113,16 +82,10 @@ abar(N+1,N+1) = 0;
 b(N+1) = CL_des/2;
 %]
 
-M = N+1;
-lda = N+1;
-ldb = lda;
-nb = 1;
-
 gamma=abar\b;
 
-%---------------------------------------------------------- evaluate result
+%------------------------------------------- evaluate result
 CL = 0;
-CM = 0;
 CDi = 0;
 CDp = 0;
 CDp2 = 0;
@@ -132,7 +95,6 @@ cdp2 = zeros(N,1);
 for i=1:N
     %Assume symmetry[
     CL = CL+2.*gamma(i)*s(i)*cos(theta(i));
-    CM = CM+2.*gamma(i)*s(i)*cos(theta(i))*(xcg-(xle(i)+cp*c(i)))/cavg;
     %]
 
     cn(i) = gamma(i)*cavg/c(i);
@@ -147,23 +109,10 @@ for i=1:N
     CDp2 = CDp2+((3.15183643E-20*Re(i)^2 - 1.07237288E-11*Re(i) + 6.00306257E-03)+(0.00172387*((gamma(i)*cavg/c(i)))^2))*s(i)*2;
 end
 
-ar = bref^2/sref;
-e = CL^2/(pi*ar*CDi);
+alf_ind = gamma(1)*cavg/4/bref;
 
 % Add graph step
 plot(y,cn)
 xlabel('Half-span, ft')
 ylabel('cl')
 title('Spanwise Lift Distribution')
-
-%------------------------------------------------------------ export config
-alf_ind = gamma(1)*cavg/4/bref;
-a0 = zeros(N,1) + 2*pi;
-alf_ZL = zeros(N,1);
-twist = (cn./a0 + alf_ind + alf_ZL*pi/180)*180/pi;
-
-% Write to file
-%fid = fopen('lltwing.dat','w');
-%fprintf(fid,'%13s %13s %13s %13s %13s %13s %13s\r\n','xle','xte','y','z','twist(deg)','a0','alfZL(deg)');
-%fprintf(fid,'%13.8f %13.8f %13.8f %13.8f %13.8f %13.8f %13.8f\r\n',[vert [twist a0 alf_ZL;0 0 0]].');
-%fid = fclose(fid);
