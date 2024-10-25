@@ -1,5 +1,5 @@
-function [y,xle,xte,c] = wingify(P)
-%WINGIFY
+function [y,xle,xte] = wingify(P)
+%WINGIFY  Wing description from polygon.
 N = size(P,1);
 
 [~,k] = min(P(:,2));
@@ -16,5 +16,3 @@ y = unique(P(:,2),'sorted');
 
 xle = interp1(P(l1,2),P(l1,1),y);
 xte = interp1(P(l2,2),P(l2,1),y);
-
-c = xte-xle;
