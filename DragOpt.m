@@ -31,8 +31,8 @@ x = xle + 0.25*c;
 theta = atan2(dz,dy);
 
 %--------------------------------------- calculate constants
-sref = c.' * dy; %Reference area
-cavg = sref/bref; %Mean geometric chord
+sref = 2 * c.' * dy; %Reference area
+cavg = sref/bref;    %Mean geometric chord
 cmac = 2/sref*trapz((vert(:,2)-vert(:,1)).^2,vert(:,3));
 Re = Re*c/cmac;
 
