@@ -2,6 +2,8 @@
 clear
 close all
 
+initutils();
+
 geom = importWing('lltwing.dat');
 
 alpha= 0;

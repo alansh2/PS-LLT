@@ -4,10 +4,6 @@ function pgon = decsg2(gd,sf,ns)
 %   gd: geometry description vector
 %   sf: set formula
 %   ns: name-space matrix
-filename = mfilename('fullpath');
-filepath = fileparts( filename );
-
-addpath([filepath,'/poly-test']);
 
 %-------------------------------------------------------------- parse input
 % validate name-space and count regions
