@@ -1,10 +1,10 @@
-function geom = importWing(filename)
+function [geom,vdo] = importWing(filename)
 %IMPORTWING  Assemble LLT wing object from file
 
 %--------------------------------- general-purpose extractor
 fid = fopen(filename,'r');
 C = textscan(fid,'%[^\n]');
-fid = fclose(fid);
+fclose(fid);
 
 nrows = size(C{1},1);
 A = zeros(nrows,7);
@@ -16,6 +16,7 @@ for i = 1:nrows
         A(N,:) = a;
     end
 end
+vdo = A(1:N,1:4); % vertex definition accepted by DragOpt
 A = num2cell(A(1:N,:),1);
 [xLE,xTE,y,z,geom.twist,geom.a0,geom.alf_ZL] = deal(A{:});
 %-- remove padding from values defined at control points
